@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# termux-nix — manage the termux home config like nixos-rebuild: build on the
+# PC, push the closure to the device over ssh, activate there.
+#
+# On-device proot work is the crash source (memory pressure kills the termux
+# app), so the bulk transfer goes in via NATIVE rsync straight into the
+# container's store dir — no proot. The only proot step is a light DB load,
+# and materialize (switch.sh) is pure native shell. Requires on the PC:
+# nix `extra-platforms = aarch64-linux` + qemu-binfmt (cache.nixos.org
+# substitutes the deps; only the tiny config derivations build locally).
+#
+# usage: termux-nix <command> [host]        host defaults to "termux"
+#
+#   switch [host]   build + install termux pkgs + push closure + activate
+#   build           build the generation on the PC, print the store path
+#   update          update flake inputs (nixpkgs, home-manager)
+#   gc [host]       delete container store paths unreachable from the last
+#                   switched generation (rooted by switch.sh)
+set -euo pipefail
+cd "$(dirname "$0")"
+. nix-engine/env.sh
+
+usage() { grep '^#   ' "$0" | sed 's/^#   //'; exit 1; }
+
+cmd_build() {
+  nix build ".#$FLAKE_ATTR" --no-link --print-out-paths
+}
+
+cmd_update() {
+  # a gh token raises the github api rate limit when available
+  token=$(gh auth token 2>/dev/null || true)
+  nix flake update nixpkgs home-manager \
+    ${token:+--option access-tokens "github.com=$token"}
+}
+
+cmd_gc() {
+  # the root is created by switch.sh; without it gc would reap the live generation
+  ssh "$HOST" "[ -L $CONTAINER_ROOTFS/nix/var/nix/gcroots/termux-nix ]" || {
+    echo "no gc root on device — run 'termux-nix switch' once first"; exit 1; }
+  ssh "$HOST" "proot-distro login $DISTRO -- nix-store --gc"
+}
+
+cmd_switch() {
+  echo ">> building aarch64 generation on PC"
+  out=$(cmd_build)
+  paths=$(nix-store -qR "$out")
+  echo "   out: $out"
+  echo "   closure: $(echo "$paths" | wc -l) paths, $(nix path-info -Sh "$out" | awk '{print $2}')B"
+
+  echo ">> bootstrapping device (first switch only)"
+  # fresh device = user ran only `pkg install openssh` + authorized_keys + sshd.
+  # pip-installed proot-distro is the last bootstrap artifact, so its absence
+  # marks a fresh device; once present this whole block is skipped.
+  # pkg upgrade must never prompt: --force-confnew answers dpkg conffile
+  # prompts, DEBIAN_FRONTEND silences debconf, `yes ""` feeds anything left.
+  if ! ssh "$HOST" 'command -v proot-distro >/dev/null 2>&1'; then
+    ssh "$HOST" '
+      set -ex
+      export DEBIAN_FRONTEND=noninteractive
+      pkg update -y
+      yes "" | pkg upgrade -y -o Dpkg::Options::=--force-confnew
+      pkg install -y x11-repo
+      pkg install -y termux-x11-nightly
+      pkg install -y openssh rsync
+      pkg install -y python proot
+      pip install proot-distro
+    '
+  fi
+
+  echo ">> installing termux native packages"
+  # read the list from the PC-side build output: on-device packages.txt only
+  # exists after the first materialize, and switch.sh needs these (sv etc.)
+  ssh "$HOST" 'xargs pkg install -y' <"$out/home-files/.config/termux-nix/packages.txt"
+
+  echo ">> syncing repo source to device (scripts + flake)"
+  rsync -rl --delete --exclude .git --exclude result ./ "$HOST":termux-nix/
+
+  echo ">> container setup (install if missing + nix.conf, idempotent)"
+  # pin the container's `nixpkgs` registry entry to the locked input's SOURCE
+  # STORE PATH (pushed below with the closure): `nix run nixpkgs#x` then needs
+  # no network at all for the source and resolves to the pushed store paths
+  nixpkgs_src=$(nix eval --raw --impure \
+    --expr '(builtins.getFlake (toString ./.)).inputs.nixpkgs.outPath')
+  ssh "$HOST" "TN_NIXPKGS_SRC=$nixpkgs_src sh ~/termux-nix/nix-engine/setup.sh"
+
+  echo ">> placing closure into container store (native rsync, no proot)"
+  # each /nix/store/X -> $STORE_PHYS/X ; identical hashes already there are skipped
+  rsync -a --info=progress2 $paths "$nixpkgs_src" "$HOST":"$STORE_PHYS"/
+
+  echo ">> registering paths in the container nix db (light proot step)"
+  nix-store --dump-db $paths "$nixpkgs_src" |
+    ssh "$HOST" "proot-distro login $DISTRO -- nix-store --load-db" ||
+    echo "   (db load failed — non-fatal; symlinks still work, but container GC could reap them)"
+
+  echo ">> materializing on device (symlink farm, native, no proot)"
+  ssh "$HOST" "TN_OUT=$out sh ~/termux-nix/nix-engine/switch.sh"
+
+  echo ">> installing pip packages"
+  ssh "$HOST" 'xargs pip install -q <~/.config/termux-nix/pip.txt'
+}
+
+cmd=${1:-}
+shift || true
+HOST=${1:-termux}
+
+case "$cmd" in
+  switch) cmd_switch ;;
+  build)  cmd_build ;;
+  update) cmd_update ;;
+  gc)     cmd_gc ;;
+  *)      usage ;;
+esac
