@@ -13,6 +13,9 @@ let
     # required by the termux-x11 runit service (pkgs/services.nix) and the
     # start-desktop-* scripts
     "termux-x11-nightly"
+    # turnip vulkan driver for adreno; mesa defaults GL to zink on top of it,
+    # without it GL falls back to llvmpipe (software)
+    "mesa-vulkan-icd-freedreno"
 
     "i3"
     "i3status"
@@ -33,6 +36,7 @@ let
     "gawk"
     "pulseaudio"
     "lxterminal"
+    "konsole"
     "xscreensaver"
     "python"
     "python-pip"
@@ -70,6 +74,14 @@ let
       done
       am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
       pulseaudio --start --exit-idle-time=-1
+      # turnip's kgsl backend (samsung kernel) has no GPU timestamp support and
+      # assert-aborts when GL timer queries are used — mask those extensions so
+      # apps that probe them (chromium) don't crash the GPU process
+      export MESA_EXTENSION_OVERRIDE="-GL_ARB_timer_query -GL_EXT_timer_query -GL_EXT_disjoint_timer_query"
+      # picked up by the chromium-browser launcher: hardware accel via
+      # ANGLE-on-GLES -> zink -> turnip (--use-angle=vulkan fails: chromium's
+      # bundled ANGLE wants vulkan instance extensions turnip doesn't have)
+      export CHROMIUM_USER_FLAGS="--use-angle=gles --ignore-gpu-blocklist --disable-gpu-sandbox"
       exec env DISPLAY=:0 ${session}
     '';
   };

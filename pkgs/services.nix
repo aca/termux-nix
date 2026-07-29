@@ -21,6 +21,14 @@ let
         exec sshd -D -e 2>&1
       '';
     };
+    clipsync = {
+      enable = true;
+      run = ''
+        #!/data/data/com.termux/files/usr/bin/sh
+        export DISPLAY=:0
+        exec /data/data/com.termux/files/home/.local/bin/clipsync sync root:4445
+      '';
+    };
   };
 in
 {

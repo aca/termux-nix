@@ -1,4 +1,4 @@
-{ lib, ... }: {
+{lib, ... }: {
   imports = [
     ./pkgs/i3.nix
     ./pkgs/i3status.nix
@@ -8,7 +8,7 @@
     ./pkgs/nix-apps.nix
     ./pkgs/lxterminal.nix
     ./pkgs/lxqt.nix
-    # ./home/konsole.nix
+    ./pkgs/konsole.nix
     ./pkgs/fonts.nix
     ./pkgs/misc.nix
     ./pkgs/services.nix
@@ -37,9 +37,6 @@
     ServerAliveInterval 15
     ServerAliveCountMax 3
     HostKeyAlgorithms +ssh-rsa
-
-    ForwardX11 yes
-    ForwardX11Trusted yes
   '';
 
   # Slim the on-device closure

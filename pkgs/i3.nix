@@ -33,7 +33,6 @@
 
     # Kill focused window
     bindsym $mod+q kill
-    bindsym Mod1+q kill
 
     # Reload the configuration file
     bindsym $mod+Shift+c reload

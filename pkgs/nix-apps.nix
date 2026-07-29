@@ -22,7 +22,7 @@ let
     fontDirectories = [
       pkgs.dejavu_fonts
       pkgs.liberation_ttf
-      pkgs.noto-fonts-color-emoji
+      # pkgs.noto-fonts-color-emoji
       pkgs.noto-fonts-cjk-sans
       pkgs.ibm-plex
     ];
@@ -57,22 +57,22 @@ let
       bin = "ghq";
       drv = pkgs.ghq;
     }
-    {
-      # cgo needs a C toolchain: go runs $CC for compile/link, and the nixpkgs
-      # gcc wrapper reaches glibc headers and binutils by absolute path, so
-      # nothing else has to be on the termux PATH.
-      bin = "go";
-      drv = pkgs.go;
-      env = "CC=${pkgs.gcc}/bin/gcc";
-    }
-    {
-      bin = "gopls";
-      drv = pkgs.gopls;
-    }
-    {
-      bin = "gofumpt";
-      drv = pkgs.gofumpt;
-    }
+    # {
+    #   # cgo needs a C toolchain: go runs $CC for compile/link, and the nixpkgs
+    #   # gcc wrapper reaches glibc headers and binutils by absolute path, so
+    #   # nothing else has to be on the termux PATH.
+    #   bin = "go";
+    #   drv = pkgs.go;
+    #   env = "CC=${pkgs.gcc}/bin/gcc";
+    # }
+    # {
+    #   bin = "gopls";
+    #   drv = pkgs.gopls;
+    # }
+    # {
+    #   bin = "gofumpt";
+    #   drv = pkgs.gofumpt;
+    # }
     {
       # from master: claude-code updates land there long before the release
       bin = "claude";
