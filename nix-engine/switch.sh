@@ -111,7 +111,9 @@ for d in "$SVSRC"/*/; do
   # best-effort: sv is absent before termux-services is installed (first
   # switch) and fails when runsvdir isn't up; the down file still encodes
   # the state, applied when the supervisor next starts
-  if [ -e "$d/down" ]; then
+  if [ -e "$d/manual" ]; then
+    : # manual service: runtime state driven by sv (start/stop-desktop), not switch
+  elif [ -e "$d/down" ]; then
     sv down "$n" 2>/dev/null || true
   else
     sv up "$n" 2>/dev/null || true
@@ -126,15 +128,17 @@ done
 # 5. apply live where possible
 DISPLAY=:0 i3-msg reload >/dev/null 2>&1 || true
 # termux.properties (enforce-char-based-input etc.) only takes effect when the
-# app re-reads it — reload here so a switch always applies it
-termux-reload-settings >/dev/null 2>&1 || true
+# app re-reads it — reload here so a switch always applies it.
+# both reload calls IPC into an app process and block forever if android has
+# frozen it (cached-app freezer) — bound them so switch can't hang
+timeout 10 termux-reload-settings >/dev/null 2>&1 || true
 # termux-x11 input prefs drift back (the app rewrites them from memory on
 # restart), so reassert the korean-input-critical ones on every switch:
 # preferScancodes=false + enforceCharBasedInput=false keep the editor a
 # normal TYPE_CLASS_TEXT one so the android IME composes hardware keys
 # (NOTE: enforceCharBasedInput is INVERTED vs the termux-app property —
 # in termux-x11, true means TYPE_NULL/raw)
-termux-x11-preference \
+timeout 20 termux-x11-preference \
   preferScancodes:"false" \
   enforceCharBasedInput:"false" \
   showIMEWhileExternalConnected:"true" >/dev/null 2>&1 || true

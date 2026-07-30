@@ -13,6 +13,9 @@ let
     # required by the termux-x11 runit service (pkgs/services.nix) and the
     # start-desktop-* scripts
     "termux-x11-nightly"
+    # Xvfb for the xvfb runit service (pkgs/services.nix): headless :0 when
+    # the desktop is off
+    "xorg-server-xvfb"
     # turnip vulkan driver for adreno; mesa defaults GL to zink on top of it,
     # without it GL falls back to llvmpipe (software)
     "mesa-vulkan-icd-freedreno"
@@ -68,6 +71,15 @@ let
       # fights runsv (it restarts whatever pkill kills, and the extra loader
       # crash-loops on the taken :0, resetting the app's input every 2s).
       export SVDIR=/data/data/com.termux/files/usr/var/service
+      # xvfb (pkgs/services.nix) holds :0 while the desktop is off — stop it
+      # and wait for it to release the display before termux-x11 takes over
+      sv down xvfb 2>/dev/null
+      if pgrep -x Xvfb >/dev/null 2>&1; then
+        pkill -x Xvfb 2>/dev/null
+        i=0; while [ -e /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] && [ $i -lt 25 ]; do
+          sleep 0.2; i=$((i+1))
+        done
+      fi
       sv up termux-x11 2>/dev/null
       i=0; until [ -e /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] || [ $i -ge 20 ]; do
         sleep 0.5; i=$((i+1))
@@ -114,6 +126,9 @@ in
       pkill termux-x11
       am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 >/dev/null 2>&1
       pulseaudio --kill 2>/dev/null
+      # hand :0 back to the headless xvfb service; if termux-x11 hasn't
+      # released the display yet, xvfb's own 15s retry loop picks it up
+      sv up xvfb 2>/dev/null
     '';
   };
 }
