@@ -15,7 +15,7 @@ let
     "termux-x11-nightly"
     # Xvfb for the xvfb runit service (pkgs/services.nix): headless :0 when
     # the desktop is off
-    "xorg-server-xvfb"
+    # "xorg-server-xvfb"
     # turnip vulkan driver for adreno; mesa defaults GL to zink on top of it,
     # without it GL falls back to llvmpipe (software)
     "mesa-vulkan-icd-freedreno"
@@ -71,15 +71,18 @@ let
       # fights runsv (it restarts whatever pkill kills, and the extra loader
       # crash-loops on the taken :0, resetting the app's input every 2s).
       export SVDIR=/data/data/com.termux/files/usr/var/service
-      # xvfb (pkgs/services.nix) holds :0 while the desktop is off — stop it
-      # and wait for it to release the display before termux-x11 takes over
-      sv down xvfb 2>/dev/null
-      if pgrep -x Xvfb >/dev/null 2>&1; then
-        pkill -x Xvfb 2>/dev/null
-        i=0; while [ -e /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] && [ $i -lt 25 ]; do
-          sleep 0.2; i=$((i+1))
-        done
-      fi
+      # xvfb no longer used — termux-x11 owns :0 from boot
+      # sv down xvfb 2>/dev/null
+      # if pgrep -x Xvfb >/dev/null 2>&1; then
+      #   pkill -x Xvfb 2>/dev/null
+      #   i=0; while [ -e /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] && [ $i -lt 25 ]; do
+      #     sleep 0.2; i=$((i+1))
+      #   done
+      # fi
+      # the boot-started i3 service (pkgs/services.nix) holds the WM slot on
+      # :0 — stop it before this session takes over
+      sv down i3 2>/dev/null
+      pkill -x i3 2>/dev/null
       sv up termux-x11 2>/dev/null
       i=0; until [ -e /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] || [ $i -ge 20 ]; do
         sleep 0.5; i=$((i+1))
@@ -107,7 +110,22 @@ in
 
   home.file.".termux/termux.properties".text = termuxProperties;
 
-  home.file.".local/bin/start-desktop-i3" = mkStartDesktop "i3";
+  # i3 runs as a runit service from boot (pkgs/services.nix) — this only makes
+  # sure the services are up and brings the termux-x11 activity to front
+  home.file.".local/bin/start-desktop-i3" = {
+    executable = true;
+    text = ''
+      #!/data/data/com.termux/files/usr/bin/sh
+      export SVDIR=/data/data/com.termux/files/usr/var/service
+      sv up termux-x11 2>/dev/null
+      i=0; until [ -e /data/data/com.termux/files/usr/tmp/.X11-unix/X0 ] || [ $i -ge 20 ]; do
+        sleep 0.5; i=$((i+1))
+      done
+      sv up i3 2>/dev/null
+      am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1
+      pulseaudio --start --exit-idle-time=-1
+    '';
+  };
 
   home.file.".local/bin/start-desktop-lxqt" =
     mkStartDesktop "dbus-launch --exit-with-session startlxqt";
@@ -117,18 +135,19 @@ in
     text = ''
       #!/data/data/com.termux/files/usr/bin/sh
       # stop session (i3/lxqt) + termux-x11 server + pulseaudio (managed by termux-nix)
+      # service down FIRST so runsv doesn't restart what pkill kills; the pkill
+      # then also reaps any stray process not started by runsv
+      export SVDIR=/data/data/com.termux/files/usr/var/service
+      sv down i3 2>/dev/null
       pkill i3
       pkill lxqt-session
-      # service down FIRST so runsv doesn't restart the loader; the pkill then
-      # also reaps any stray loader not started by runsv
-      export SVDIR=/data/data/com.termux/files/usr/var/service
       sv down termux-x11 2>/dev/null
       pkill termux-x11
       am broadcast -a com.termux.x11.ACTION_STOP -p com.termux.x11 >/dev/null 2>&1
       pulseaudio --kill 2>/dev/null
-      # hand :0 back to the headless xvfb service; if termux-x11 hasn't
-      # released the display yet, xvfb's own 15s retry loop picks it up
-      sv up xvfb 2>/dev/null
+      # xvfb no longer used — nothing takes :0 back; next termux boot (or
+      # start-desktop-i3) brings termux-x11 + i3 up again
+      # sv up xvfb 2>/dev/null
     '';
   };
 }

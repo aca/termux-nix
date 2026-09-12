@@ -35,6 +35,11 @@ let
       env = "FONTCONFIG_FILE=${fontsConf}";
     }
     {
+      bin = "omnissa-horizon-client";
+      drv = pkgs.omnissa-horizon-client;
+      env = "FONTCONFIG_FILE=${fontsConf}";
+    }
+    {
       bin = "zathura";
       drv = pkgs.zathura.override {
         plugins = [

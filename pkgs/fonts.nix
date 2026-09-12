@@ -15,6 +15,11 @@ let
       cp ${pkgs.nerd-fonts.iosevka-term-slab}/share/fonts/truetype/NerdFonts/IosevkaTermSlab/IosevkaTermSlabNerdFontMono-*.ttf $out/share/fonts/
     '')
 
+    (pkgs.runCommand "aporetic-serif-mono" { } ''
+      mkdir -p $out/share/fonts
+      cp ${pkgs.aporetic-bin}/share/fonts/truetype/aporetic-serif-mono/TTF/*.ttf $out/share/fonts/
+    '')
+
     (pkgs.runCommand "ibm-plex-kr" { } ''
       mkdir -p $out/share/fonts
       cp ${pkgs.ibm-plex}/share/fonts/truetype/*KR*.ttf $out/share/fonts/
