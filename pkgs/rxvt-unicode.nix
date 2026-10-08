@@ -7,7 +7,17 @@
   # re-read on every launch — config changes apply right after a switch.
   # Colors + font mirror lxterminal.nix / gnome-terminal.nix.
   home.file.".Xdefaults".text = ''
-    URxvt.font: xft:IosevkaTermSlab Nerd Font Mono:size=14
+    ! NanumGothicCoding: hangul fallback (pkgs/fonts.nix), dual-width mono
+    URxvt.font: xft:IosevkaTermSlab Nerd Font Mono:size=14,xft:NanumGothicCoding:size=14
+    ! only ext we load: resize-font (vendored in the deb); steps every size=
+    ! in the font list, so latin + hangul scale together. An UNSET
+    ! perl-ext-common would load urxvt's "default" ext set — keep it pinned.
+    URxvt.perl-ext-common: resize-font
+    ! bind as keysym ACTIONS, not URxvt.resize-font.* resources — the ext's
+    ! on_init auto-bind silently has no effect on 9.26 (verified on device)
+    URxvt.keysym.C-minus: resize-font:smaller
+    URxvt.keysym.C-equal: resize-font:bigger
+    URxvt.keysym.C-0: resize-font:reset
     URxvt.scrollBar: false
     ! scrollback lives in tmux (mirrors lxterminal scrollback=0)
     URxvt.saveLines: 0
@@ -15,7 +25,7 @@
     ! ctrl+shift alone pops the ISO 14755 unicode-entry overlay — disable
     URxvt.iso14755: false
     URxvt.iso14755_52: false
-    ! clipboard: builtin ctrl+alt+c / ctrl+alt+v (our build has perl disabled)
+    ! clipboard: builtin ctrl+alt+c / ctrl+alt+v (no clipboard ext loaded)
     URxvt.background: #000000
     URxvt.foreground: #F1FCF8
     URxvt.color0: #3B3B3B

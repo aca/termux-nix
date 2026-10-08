@@ -24,6 +24,13 @@ let
       mkdir -p $out/share/fonts
       cp ${pkgs.ibm-plex}/share/fonts/truetype/*KR*.ttf $out/share/fonts/
     '')
+
+    # hangul in urxvt (fallback in URxvt.font, pkgs/rxvt-unicode.nix);
+    # dual-width monospaced hangul, made for terminals/editors
+    (pkgs.runCommand "nanum-gothic-coding" { } ''
+      mkdir -p $out/share/fonts
+      cp ${pkgs.nanum-gothic-coding}/share/fonts/NanumGothicCoding/*.ttf $out/share/fonts/
+    '')
   ];
 in
 {
