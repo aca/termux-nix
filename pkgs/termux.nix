@@ -25,6 +25,9 @@ let
     "lxqt"
     "openbox"
 
+    # caps->ctrl remap in the i3 config (pkgs/i3.nix exec_always)
+    "xorg-setxkbmap"
+
     "libnotify"
     "rofi"
     "xsel"
@@ -39,12 +42,16 @@ let
     "gawk"
     "pulseaudio"
     "lxterminal"
+    # default $term in i3 ($mod+x); settings declared in pkgs/gnome-terminal.nix
+    "gnome-terminal"
     "konsole"
     "xscreensaver"
     "python"
     "python-pip"
 
-    # "flameshot"
+    # $mod+p screenshot in i3 (pkgs/i3.nix): scrot region select -> xclip
+    "scrot"
+    "xclip"
     # "ghq"
   ];
 

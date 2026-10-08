@@ -19,7 +19,7 @@
     set $down j
     set $up k
     set $right l
-    set $term lxterminal
+    set $term gnome-terminal
 
     default_border pixel 0
     smart_gaps on
@@ -27,6 +27,11 @@
     # bspwm-style spiral: auto splith/splitv by window aspect ratio
     # (native pip package; runs only on restart, not on config reload)
     exec_always --no-startup-id autotiling
+
+    # caps lock -> left ctrl. exec_always so an i3 reload (every switch)
+    # reasserts it if the termux-x11 app reset the keymap; the bare -option
+    # first clears old options so reruns stay idempotent
+    exec_always --no-startup-id setxkbmap -option -option ctrl:nocaps
 
     bindsym $mod+x exec $term
     bindsym $mod+Return exec --no-startup-id rofi -modes combi -show combi -font 'IBM Plex Sans KR 12'
@@ -62,8 +67,10 @@
     bindsym $mod+bracketright focus output right
     bindsym $mod+bracketleft focus output left
 
-    # screenshot: region select, annotate, enter=copy ctrl+s=save
-    bindsym $mod+p exec --no-startup-id flameshot gui
+    # screenshot: drag a region, PNG lands on the clipboard. --release: run
+    # after the keys are up so scrot's pointer grab isn't blocked by the bind.
+    # -e runs only on success, so an aborted shot doesn't clobber the clipboard
+    bindsym --release $mod+p exec --no-startup-id scrot -s -o /data/data/com.termux/files/usr/tmp/screenshot.png -e 'xclip -selection clipboard -t image/png -i $f'
 
     bindsym $mod+f fullscreen
 

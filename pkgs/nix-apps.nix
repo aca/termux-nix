@@ -1,7 +1,6 @@
 {
   pkgs,
   lib,
-  pkgsUnstable,
   ...
 }:
 let
@@ -35,11 +34,6 @@ let
       env = "FONTCONFIG_FILE=${fontsConf}";
     }
     {
-      bin = "omnissa-horizon-client";
-      drv = pkgs.omnissa-horizon-client;
-      env = "FONTCONFIG_FILE=${fontsConf}";
-    }
-    {
       bin = "zathura";
       drv = pkgs.zathura.override {
         plugins = [
@@ -50,6 +44,7 @@ let
       };
       env = "FONTCONFIG_FILE=${fontsConf}";
     }
+
     # {
     #   bin = "vivaldi";
     #   drv = pkgs.vivaldi.override { proprietaryCodecs = true; };
@@ -57,11 +52,11 @@ let
     #   env = "FONTCONFIG_FILE=${fontsConf}";
     # }
 
-    # cli applications
-    {
-      bin = "ghq";
-      drv = pkgs.ghq;
-    }
+    # # cli applications
+    # {
+    #   bin = "ghq";
+    #   drv = pkgs.ghq;
+    # }
     # {
     #   # cgo needs a C toolchain: go runs $CC for compile/link, and the nixpkgs
     #   # gcc wrapper reaches glibc headers and binutils by absolute path, so
@@ -78,11 +73,6 @@ let
     #   bin = "gofumpt";
     #   drv = pkgs.gofumpt;
     # }
-    {
-      # from master: claude-code updates land there long before the release
-      bin = "claude";
-      drv = pkgsUnstable.claude-code;
-    }
   ];
 
   rootfs = "/data/data/com.termux/files/usr/var/lib/proot-distro/containers/nix/rootfs";
@@ -121,7 +111,6 @@ in
   xdg.configFile."termux-nix/resolv.conf".text = ''
     nameserver 100.100.100.100
     nameserver 8.8.8.8
-    search folk-uaru.ts.net
     options timeout:1
   '';
 }

@@ -1,0 +1,38 @@
+{ ... }: {
+  # urxvt is NOT in the termux repos — it's a custom termux deb built from
+  # termux-pkgs/rxvt-unicode/build.sh (see header there for rebuild/install).
+  #
+  # urxvt reads ~/.Xdefaults directly at startup: nothing in this setup runs
+  # xrdb, so the X server has no RESOURCE_MANAGER property and this file is
+  # re-read on every launch — config changes apply right after a switch.
+  # Colors + font mirror lxterminal.nix / gnome-terminal.nix.
+  home.file.".Xdefaults".text = ''
+    URxvt.font: xft:IosevkaTermSlab Nerd Font Mono:size=14
+    URxvt.scrollBar: false
+    ! scrollback lives in tmux (mirrors lxterminal scrollback=0)
+    URxvt.saveLines: 0
+    URxvt.cursorBlink: false
+    ! ctrl+shift alone pops the ISO 14755 unicode-entry overlay — disable
+    URxvt.iso14755: false
+    URxvt.iso14755_52: false
+    ! clipboard: builtin ctrl+alt+c / ctrl+alt+v (our build has perl disabled)
+    URxvt.background: #000000
+    URxvt.foreground: #F1FCF8
+    URxvt.color0: #3B3B3B
+    URxvt.color1: #E05561
+    URxvt.color2: #8CC265
+    URxvt.color3: #E5C07B
+    URxvt.color4: #4AA5F0
+    URxvt.color5: #C162DE
+    URxvt.color6: #42B3C2
+    URxvt.color7: #D7DAE0
+    URxvt.color8: #5C6370
+    URxvt.color9: #FF616E
+    URxvt.color10: #A5E075
+    URxvt.color11: #F0C674
+    URxvt.color12: #4DC4FF
+    URxvt.color13: #DE73FF
+    URxvt.color14: #4CD1E0
+    URxvt.color15: #FFFFFF
+  '';
+}

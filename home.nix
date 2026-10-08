@@ -7,8 +7,10 @@
     ./pkgs/nix-cli.nix
     ./pkgs/nix-apps.nix
     ./pkgs/lxterminal.nix
-    ./pkgs/lxqt.nix
-    ./pkgs/konsole.nix
+    ./pkgs/gnome-terminal.nix
+    ./pkgs/rxvt-unicode.nix
+    # ./pkgs/lxqt.nix
+    # ./pkgs/konsole.nix
     ./pkgs/fonts.nix
     ./pkgs/misc.nix
     ./pkgs/services.nix

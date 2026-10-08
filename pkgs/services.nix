@@ -25,22 +25,24 @@ let
     #     sleep 15
     #   '';
     # };
-    # started at boot by runsvdir; owns :0 permanently. The app activity is
-    # only brought up by start-desktop-i3 — the server (and clipboard for
-    # xclip) works without it.
+    # not started at boot (autostart = false) — start-desktop-i3 brings it up
+    # with sv up; it owns :0 while the desktop is on.
     termux-x11 = {
       enable = true;
       manual = true;
+      autostart = false;
       run = ''
         #!/data/data/com.termux/files/usr/bin/sh
         exec termux-x11 :0 2>&1
       '';
     };
-    # i3 session on :0, started at boot alongside termux-x11.
-    # start-desktop-i3 only shows the activity; stop-desktop svs this down.
+    # i3 session on :0, started by start-desktop-i3 alongside termux-x11
+    # (autostart = false too — at boot :0 never comes up, it would crash-loop).
+    # stop-desktop svs this down.
     i3 = {
       enable = true;
       manual = true;
+      autostart = false;
       run = ''
         #!/data/data/com.termux/files/usr/bin/sh
         # wait for the termux-x11 service to bring up :0
@@ -61,7 +63,9 @@ let
         # ANGLE-on-GLES -> zink -> turnip (--use-angle=vulkan fails: chromium's
         # bundled ANGLE wants vulkan instance extensions turnip doesn't have)
         export CHROMIUM_USER_FLAGS="--use-angle=gles --ignore-gpu-blocklist --disable-gpu-sandbox"
-        exec i3 2>&1
+        # session bus for i3-spawned apps — gnome-terminal needs it to reach
+        # gnome-terminal-server
+        exec dbus-launch --exit-with-session i3 2>&1
       '';
     };
     sshd = {

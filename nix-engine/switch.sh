@@ -127,6 +127,13 @@ done
 
 # 5. apply live where possible
 DISPLAY=:0 i3-msg reload >/dev/null 2>&1 || true
+# gnome-terminal settings live in dconf (pkgs/gnome-terminal.nix declares a
+# keyfile) — dconf needs a session bus, so run it under a throwaway one; the
+# db file is shared, a running gnome-terminal-server picks it up on restart
+if command -v dconf >/dev/null 2>&1 && [ -e "$HOME/.config/termux-nix/gnome-terminal.dconf" ]; then
+  timeout 20 dbus-run-session -- dconf load /org/gnome/terminal/legacy/ \
+    < "$HOME/.config/termux-nix/gnome-terminal.dconf" >/dev/null 2>&1 || true
+fi
 # termux.properties (enforce-char-based-input etc.) only takes effect when the
 # app re-reads it — reload here so a switch always applies it.
 # both reload calls IPC into an app process and block forever if android has
